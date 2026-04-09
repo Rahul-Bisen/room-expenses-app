@@ -4,9 +4,13 @@ import 'package:http/http.dart' as http;
 import 'models.dart';
 
 class ApiService {
-  // Web/desktop uses localhost, Android emulator uses 10.0.2.2
+  // When deployed, set BACKEND_URL. Locally: localhost for web, 10.0.2.2 for Android emulator
+  static const String? _deployedUrl = String.fromEnvironment('BACKEND_URL') != ''
+      ? String.fromEnvironment('BACKEND_URL')
+      : null;
+
   static String get _baseUrl =>
-      kIsWeb ? 'http://localhost:8080/api' : 'http://10.0.2.2:8080/api';
+      _deployedUrl ?? (kIsWeb ? 'http://localhost:8080/api' : 'http://10.0.2.2:8080/api');
 
   static String get baseUrl => _baseUrl;
 

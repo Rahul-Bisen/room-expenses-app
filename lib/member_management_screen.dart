@@ -104,99 +104,220 @@ class _MemberManagementScreenState extends State<MemberManagementScreen> {
         }
       },
       child: Scaffold(
+        backgroundColor: const Color(0xFFF1F5F9),
         appBar: AppBar(
           title: const Text('Manage Members'),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back_rounded),
             onPressed: () => Navigator.pop(context, _changed),
           ),
         ),
         body: Column(
           children: [
             // Add member row
-            Padding(
+            Container(
+              margin: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
               padding: const EdgeInsets.all(16),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        hintText: 'Member name',
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6366F1).withAlpha(25),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.person_add_rounded, size: 18, color: Color(0xFF6366F1)),
                       ),
-                      textCapitalization: TextCapitalization.characters,
-                      onSubmitted: (_) => _addMember(),
-                    ),
+                      const SizedBox(width: 10),
+                      const Text('Add New Member', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  FilledButton.icon(
-                    onPressed: _addMember,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add'),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _nameController,
+                          decoration: const InputDecoration(
+                            hintText: 'Enter member name',
+                            prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
+                          ),
+                          textCapitalization: TextCapitalization.characters,
+                          onSubmitted: (_) => _addMember(),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        height: 48,
+                        child: FilledButton.icon(
+                          onPressed: _addMember,
+                          icon: const Icon(Icons.add_rounded, size: 20),
+                          label: const Text('Add'),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
 
-            const Divider(height: 1),
+            // Members label
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Text(
+                    '${_members.length} Members',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.grey[600]),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${_members.where((m) => m.active).length} active',
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Color(0xFF10B981)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
 
             // Member list
             Expanded(
               child: _members.isEmpty
-                  ? const Center(child: Text('No members for this month'))
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.people_outline_rounded, size: 64, color: Colors.grey[300]),
+                          const SizedBox(height: 12),
+                          Text('No members for this month', style: TextStyle(color: Colors.grey[500], fontSize: 14)),
+                        ],
+                      ),
+                    )
                   : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: _members.length,
                       itemBuilder: (ctx, i) {
                         final m = _members[i];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: m.active ? Colors.green[100] : Colors.grey[300],
-                              child: Text(
-                                m.name.isNotEmpty ? m.name[0] : '?',
-                                style: TextStyle(
-                                  color: m.active ? Colors.green[800] : Colors.grey[600],
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            title: Text(m.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                            subtitle: Row(
+                        final colors = [
+                          const Color(0xFF6366F1),
+                          const Color(0xFF8B5CF6),
+                          const Color(0xFFF59E0B),
+                          const Color(0xFF10B981),
+                          const Color(0xFFEF4444),
+                          const Color(0xFF3B82F6),
+                        ];
+                        final avatarColor = colors[i % colors.length];
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.grey.shade100),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            child: Row(
                               children: [
+                                // Avatar
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  width: 44, height: 44,
                                   decoration: BoxDecoration(
-                                    color: m.active ? Colors.green[50] : Colors.grey[200],
-                                    borderRadius: BorderRadius.circular(4),
+                                    gradient: LinearGradient(
+                                      colors: [avatarColor, avatarColor.withAlpha(180)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: Text(
-                                    m.active ? 'Active' : 'Paused',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: m.active ? Colors.green[700] : Colors.grey[600],
+                                  child: Center(
+                                    child: Text(
+                                      m.name.isNotEmpty ? m.name[0] : '?',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 18,
+                                      ),
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Fixed ₹${m.fixedContribution.toStringAsFixed(0)}',
-                                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                const SizedBox(width: 12),
+                                // Info
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(m.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: m.active ? const Color(0xFF10B981).withAlpha(20) : Colors.grey.shade100,
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Container(
+                                                  width: 6, height: 6,
+                                                  decoration: BoxDecoration(
+                                                    color: m.active ? const Color(0xFF10B981) : Colors.grey,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  m.active ? 'Active' : 'Paused',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: m.active ? const Color(0xFF10B981) : Colors.grey[600],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Fixed ₹${m.fixedContribution.toStringAsFixed(0)}',
+                                            style: TextStyle(fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.w500),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ],
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
+                                // Actions
                                 TextButton(
                                   onPressed: () => _toggleStatus(m),
-                                  child: Text(m.active ? 'Pause' : 'Reactivate'),
+                                  style: TextButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: Text(
+                                    m.active ? 'Pause' : 'Activate',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: m.active ? Colors.orange[700] : const Color(0xFF10B981),
+                                    ),
+                                  ),
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                                  icon: Icon(Icons.delete_outline_rounded, color: Colors.red[400], size: 20),
                                   onPressed: () => _deleteMember(m),
+                                  visualDensity: VisualDensity.compact,
                                 ),
                               ],
                             ),

@@ -151,142 +151,251 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isVariable = _expenseType == 'variable';
     return Scaffold(
+      backgroundColor: const Color(0xFFF1F5F9),
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Expense' : 'Add Expense'),
+        title: Text(_isEditing ? 'Edit Expense' : 'New Expense'),
       ),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Expense Type
+            // Expense Type Selector
             if (!_isEditing)
-              SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'monthly', label: Text('Monthly'), icon: Icon(Icons.calendar_month)),
-                  ButtonSegment(value: 'variable', label: Text('Variable'), icon: Icon(Icons.shopping_cart)),
-                ],
-                selected: {_expenseType},
-                onSelectionChanged: (s) => setState(() => _expenseType = s.first),
-              ),
-            const SizedBox(height: 16),
-
-            // Date
-            TextFormField(
-              controller: _dateController,
-              readOnly: true,
-              decoration: InputDecoration(
-                labelText: 'Date',
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.calendar_today),
-                  onPressed: _pickDate,
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                padding: const EdgeInsets.all(4),
+                child: Row(
+                  children: [
+                    _typeChip('monthly', 'Monthly', Icons.calendar_month_rounded, const Color(0xFF6366F1)),
+                    const SizedBox(width: 4),
+                    _typeChip('variable', 'Variable', Icons.shopping_bag_rounded, const Color(0xFFF59E0B)),
+                  ],
                 ),
               ),
-              onTap: _pickDate,
-              validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
-            // Description
-            TextFormField(
-              controller: _descriptionController,
-              decoration: InputDecoration(
-                labelText: _expenseType == 'variable' ? 'Transaction' : 'Expense',
-                border: const OutlineInputBorder(),
+            // Form Card
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
               ),
-              validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
-            ),
-            const SizedBox(height: 16),
-
-            // Cost
-            TextFormField(
-              controller: _costController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Cost',
-                border: OutlineInputBorder(),
-                prefixText: '₹ ',
-              ),
-              onChanged: (_) {
-                if (_expenseType == 'monthly') _calculateSplit();
-              },
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Required';
-                if (double.tryParse(v) == null) return 'Invalid number';
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Paid By
-            DropdownButtonFormField<String>(
-              initialValue: _paidBy,
-              decoration: const InputDecoration(
-                labelText: 'Paid By',
-                border: OutlineInputBorder(),
-              ),
-              items: widget.activeMembers
-                  .map((m) => DropdownMenuItem(value: m, child: Text(m)))
-                  .toList(),
-              onChanged: (v) => setState(() => _paidBy = v),
-              validator: (v) => v == null ? 'Required' : null,
-            ),
-            const SizedBox(height: 16),
-
-            // Split (for monthly only)
-            if (_expenseType == 'monthly') ...[
-              TextFormField(
-                controller: _splitController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Split',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (_) => _calculateSplit(),
-                validator: (v) {
-                  if (v == null || v.isEmpty) return 'Required';
-                  if (int.tryParse(v) == null) return 'Integer required';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Member amounts
-              const Text('Member Amounts', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-              const SizedBox(height: 8),
-              ...widget.activeMembers.map((m) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: TextFormField(
-                  controller: _memberControllers[m],
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: m,
-                    border: const OutlineInputBorder(),
-                    prefixText: '₹ ',
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isVariable ? 'Variable Expense Details' : 'Monthly Expense Details',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
+                  const SizedBox(height: 16),
+
+                  // Date
+                  TextFormField(
+                    controller: _dateController,
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      labelText: 'Date',
+                      prefixIcon: const Icon(Icons.calendar_today_rounded, size: 20),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.edit_calendar_rounded, size: 20),
+                        onPressed: _pickDate,
+                      ),
+                    ),
+                    onTap: _pickDate,
+                    validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Description
+                  TextFormField(
+                    controller: _descriptionController,
+                    decoration: InputDecoration(
+                      labelText: isVariable ? 'Transaction' : 'Expense',
+                      prefixIcon: Icon(isVariable ? Icons.receipt_rounded : Icons.description_rounded, size: 20),
+                    ),
+                    validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Cost
+                  TextFormField(
+                    controller: _costController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Cost',
+                      prefixIcon: Icon(Icons.currency_rupee_rounded, size: 20),
+                    ),
+                    onChanged: (_) {
+                      if (!isVariable) _calculateSplit();
+                    },
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Required';
+                      if (double.tryParse(v) == null) return 'Invalid number';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Paid By
+                  DropdownButtonFormField<String>(
+                    value: _paidBy,
+                    decoration: const InputDecoration(
+                      labelText: 'Paid By',
+                      prefixIcon: Icon(Icons.person_rounded, size: 20),
+                    ),
+                    items: widget.activeMembers
+                        .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                        .toList(),
+                    onChanged: (v) => setState(() => _paidBy = v),
+                    validator: (v) => v == null ? 'Required' : null,
+                  ),
+                ],
+              ),
+            ),
+
+            // Split & Member Amounts (for monthly only)
+            if (!isVariable) ...[
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
                 ),
-              )),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Split Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 16),
+
+                    TextFormField(
+                      controller: _splitController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Split Among',
+                        prefixIcon: Icon(Icons.call_split_rounded, size: 20),
+                      ),
+                      onChanged: (_) => _calculateSplit(),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Required';
+                        if (int.tryParse(v) == null) return 'Integer required';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 20),
+
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6366F1).withAlpha(25),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.people_alt_rounded, size: 16, color: Color(0xFF6366F1)),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('Member Amounts', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ...widget.activeMembers.map((m) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: TextFormField(
+                        controller: _memberControllers[m],
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: m,
+                          prefixIcon: CircleAvatar(
+                            radius: 14,
+                            backgroundColor: const Color(0xFF6366F1).withAlpha(25),
+                            child: Text(
+                              m.isNotEmpty ? m[0] : '?',
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF6366F1)),
+                            ),
+                          ),
+                          prefixText: '₹ ',
+                        ),
+                      ),
+                    )),
+                  ],
+                ),
+              ),
             ],
 
             const SizedBox(height: 24),
 
-            // Submit
+            // Submit Button
             SizedBox(
-              height: 48,
+              height: 52,
               child: FilledButton(
                 onPressed: _saving ? null : _submit,
+                style: FilledButton.styleFrom(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
                 child: _saving
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : Text(_isEditing
-                        ? 'Save Expense'
-                        : _expenseType == 'variable'
-                            ? 'Add Variable Expense'
-                            : 'Add Expense'),
+                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(_isEditing ? Icons.save_rounded : Icons.add_rounded, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            _isEditing
+                                ? 'Save Changes'
+                                : isVariable
+                                    ? 'Add Variable Expense'
+                                    : 'Add Monthly Expense',
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                          ),
+                        ],
+                      ),
               ),
             ),
+            const SizedBox(height: 16),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _typeChip(String value, String label, IconData icon, Color color) {
+    final selected = _expenseType == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _expenseType = value),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: selected ? color : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: selected ? Colors.white : Colors.grey[600]),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: selected ? Colors.white : Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
