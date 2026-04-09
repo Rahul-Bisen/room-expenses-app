@@ -6,6 +6,7 @@ import 'models.dart';
 class ApiService {
   // Railway deployed URL — set to null to use localhost for local dev
   static const String? _deployedUrl = 'https://room-expenses-backend-production.up.railway.app/api';
+  // static const String? _deployedUrl = null; // local dev
 
   static String get _baseUrl =>
       _deployedUrl ?? (kIsWeb ? 'http://localhost:8080/api' : 'http://10.0.2.2:8080/api');
@@ -72,6 +73,17 @@ class ApiService {
     );
     if (resp.statusCode != 200) {
       throw Exception('Failed to delete transactions: ${resp.statusCode}');
+    }
+  }
+
+  Future<void> updateTransaction(String month, int transactionId, Map<String, dynamic> transaction) async {
+    final resp = await http.put(
+      Uri.parse('$_baseUrl/transactions/${Uri.encodeComponent(month)}/$transactionId'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode(transaction),
+    );
+    if (resp.statusCode != 200) {
+      throw Exception('Failed to update transaction: ${resp.statusCode}');
     }
   }
 

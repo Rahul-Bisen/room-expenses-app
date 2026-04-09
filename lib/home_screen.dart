@@ -28,6 +28,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   bool _loading = true;
   String? _error;
 
+  // Sort state for Monthly expenses
+  String _expenseSortBy = 'date'; // date, expense, cost
+  bool _expenseSortAsc = true;
+  Set<String> _expensePaidByFilter = <String>{}; // empty = show all
+
+  // Sort state for Variable expenses
+  String _txSortBy = 'date'; // date, transaction, cost
+  bool _txSortAsc = true;
+  Set<String> _txPaidByFilter = <String>{}; // empty = show all
+
   @override
   void initState() {
     super.initState();
@@ -457,62 +467,106 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     final monthlyCount = data.expenses.length;
     final variableCount = data.transactions.length;
     final maxCount = monthlyCount > variableCount ? monthlyCount : variableCount;
-    return (maxCount * 72.0 + 60).clamp(200, 600);
+    return (maxCount * 72.0 + 110).clamp(250, 700);
   }
 
   Widget _buildMonthlyExpensesList(MonthlyResponse data) {
-    final expenses = data.expenses;
+    final expenses = List<MonthlyExpenseItem>.from(data.expenses);
     if (expenses.isEmpty) {
       return _buildEmptyState('No monthly expenses yet', Icons.calendar_month_rounded);
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(12),
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: expenses.length + 1,
-      separatorBuilder: (_, __) => const SizedBox(height: 6),
-      itemBuilder: (ctx, i) {
-        if (i == expenses.length) {
-          return _buildTotalRow(expenses.fold(0.0, (s, e) => s + e.cost));
-        }
-        final exp = expenses[i];
-        return _ExpenseTile(
-          title: exp.expense,
-          subtitle: '${_formatDate(exp.date)}  ·  Paid by ${exp.paidBy}  ·  Split ${exp.split}',
-          amount: exp.cost,
-          icon: Icons.receipt_long_rounded,
-          color: const Color(0xFF6366F1),
-          onLongPress: () => _showExpenseActions(exp),
-        );
-      },
+    _sortExpenses(expenses);
+    if (_expensePaidByFilter.isNotEmpty) {
+      expenses.retainWhere((e) => _expensePaidByFilter.contains(e.paidBy.toUpperCase()));
+    }
+
+    return Column(
+      children: [
+        _buildSortAndFilterBar(
+          sortBy: _expenseSortBy,
+          ascending: _expenseSortAsc,
+          sortOptions: const {'date': 'Date', 'expense': 'Name', 'cost': 'Cost'},
+          onSortChanged: (key, asc) => setState(() { _expenseSortBy = key; _expenseSortAsc = asc; }),
+          paidByFilter: _expensePaidByFilter,
+          activeMembers: data.activeMembers,
+          onPaidByChanged: (f) => setState(() { _expensePaidByFilter = f; }),
+        ),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: expenses.length + 1,
+            separatorBuilder: (_, __) => const SizedBox(height: 6),
+            itemBuilder: (ctx, i) {
+              if (i == expenses.length) {
+                return _buildTotalRow(expenses.fold(0.0, (s, e) => s + e.cost));
+              }
+              final exp = expenses[i];
+              return _ExpenseTile(
+                title: exp.expense,
+                subtitle: '${_formatDate(exp.date)}  ·  Paid by ${exp.paidBy}  ·  Split ${exp.split}',
+                amount: exp.cost,
+                icon: Icons.receipt_long_rounded,
+                color: const Color(0xFF6366F1),
+                onLongPress: () => _showExpenseActions(exp),
+                onEdit: () => _navigateToAddExpense(editExpense: exp),
+                onDelete: () => _deleteExpense(exp),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildVariableExpensesList(MonthlyResponse data) {
-    final transactions = data.transactions;
+    final transactions = List<MonthlyTransaction>.from(data.transactions);
     if (transactions.isEmpty) {
       return _buildEmptyState('No variable expenses yet', Icons.shopping_cart_rounded);
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(12),
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: transactions.length + 1,
-      separatorBuilder: (_, __) => const SizedBox(height: 6),
-      itemBuilder: (ctx, i) {
-        if (i == transactions.length) {
-          return _buildTotalRow(transactions.fold(0.0, (s, t) => s + t.cost));
-        }
-        final tx = transactions[i];
-        return _ExpenseTile(
-          title: tx.transaction,
-          subtitle: '${_formatDate(tx.date)}  ·  Paid by ${tx.paidBy}',
-          amount: tx.cost,
-          icon: Icons.shopping_bag_rounded,
-          color: const Color(0xFFF59E0B),
-          onLongPress: () => _showTransactionActions(tx),
-        );
-      },
+    _sortTransactions(transactions);
+    if (_txPaidByFilter.isNotEmpty) {
+      transactions.retainWhere((t) => _txPaidByFilter.contains(t.paidBy.toUpperCase()));
+    }
+
+    return Column(
+      children: [
+        _buildSortAndFilterBar(
+          sortBy: _txSortBy,
+          ascending: _txSortAsc,
+          sortOptions: const {'date': 'Date', 'transaction': 'Name', 'cost': 'Cost'},
+          onSortChanged: (key, asc) => setState(() { _txSortBy = key; _txSortAsc = asc; }),
+          paidByFilter: _txPaidByFilter,
+          activeMembers: data.activeMembers,
+          onPaidByChanged: (f) => setState(() { _txPaidByFilter = f; }),
+        ),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: transactions.length + 1,
+            separatorBuilder: (_, __) => const SizedBox(height: 6),
+            itemBuilder: (ctx, i) {
+              if (i == transactions.length) {
+                return _buildTotalRow(transactions.fold(0.0, (s, t) => s + t.cost));
+              }
+              final tx = transactions[i];
+              return _ExpenseTile(
+                title: tx.transaction,
+                subtitle: '${_formatDate(tx.date)}  ·  Paid by ${tx.paidBy}',
+                amount: tx.cost,
+                icon: Icons.shopping_bag_rounded,
+                color: const Color(0xFFF59E0B),
+                onLongPress: () => _showTransactionActions(tx),
+                onEdit: () => _navigateToAddExpense(editTransaction: tx),
+                onDelete: () => _deleteTransaction(tx),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -571,6 +625,175 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11, color: Color(0xFF6366F1)),
                 ))),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _sortExpenses(List<MonthlyExpenseItem> list) {
+    list.sort((a, b) {
+      int cmp;
+      switch (_expenseSortBy) {
+        case 'expense': cmp = a.expense.toLowerCase().compareTo(b.expense.toLowerCase()); break;
+        case 'cost': cmp = a.cost.compareTo(b.cost); break;
+        default: cmp = a.date.compareTo(b.date); break;
+      }
+      return _expenseSortAsc ? cmp : -cmp;
+    });
+  }
+
+  void _sortTransactions(List<MonthlyTransaction> list) {
+    list.sort((a, b) {
+      int cmp;
+      switch (_txSortBy) {
+        case 'transaction': cmp = a.transaction.toLowerCase().compareTo(b.transaction.toLowerCase()); break;
+        case 'cost': cmp = a.cost.compareTo(b.cost); break;
+        default: cmp = a.date.compareTo(b.date); break;
+      }
+      return _txSortAsc ? cmp : -cmp;
+    });
+  }
+
+  Widget _buildSortAndFilterBar({
+    required String sortBy,
+    required bool ascending,
+    required Map<String, String> sortOptions,
+    required void Function(String key, bool asc) onSortChanged,
+    required Set<String> paidByFilter,
+    required List<String> activeMembers,
+    required void Function(Set<String>) onPaidByChanged,
+  }) {
+    final hasPaidByFilter = paidByFilter.isNotEmpty;
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      child: Row(
+        children: [
+          Icon(Icons.sort_rounded, size: 16, color: Colors.grey[500]),
+          const SizedBox(width: 6),
+          ...sortOptions.entries.map((e) {
+            final isActive = sortBy == e.key;
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: FilterChip(
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(e.value, style: TextStyle(fontSize: 11, fontWeight: isActive ? FontWeight.w700 : FontWeight.w500)),
+                    if (isActive) ...[
+                      const SizedBox(width: 2),
+                      Icon(ascending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded, size: 12),
+                    ],
+                  ],
+                ),
+                selected: isActive,
+                onSelected: (_) {
+                  if (isActive) {
+                    onSortChanged(e.key, !ascending);
+                  } else {
+                    onSortChanged(e.key, true);
+                  }
+                },
+                selectedColor: const Color(0xFF6366F1).withAlpha(30),
+                checkmarkColor: const Color(0xFF6366F1),
+                showCheckmark: false,
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                side: BorderSide(color: isActive ? const Color(0xFF6366F1) : Colors.grey.shade300),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+              ),
+            );
+          }),
+          Container(width: 1, height: 20, margin: const EdgeInsets.symmetric(horizontal: 4), color: Colors.grey.shade300),
+          Icon(Icons.filter_alt_rounded, size: 16, color: Colors.grey[500]),
+          const SizedBox(width: 6),
+          FilterChip(
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  hasPaidByFilter ? 'Paid By (${paidByFilter.length})' : 'Paid By',
+                  style: TextStyle(fontSize: 11, fontWeight: hasPaidByFilter ? FontWeight.w700 : FontWeight.w500),
+                ),
+                const SizedBox(width: 2),
+                Icon(Icons.arrow_drop_down_rounded, size: 16, color: hasPaidByFilter ? const Color(0xFF6366F1) : Colors.grey),
+              ],
+            ),
+            selected: hasPaidByFilter,
+            onSelected: (_) => _showPaidByFilterDialog(activeMembers, paidByFilter, onPaidByChanged),
+            selectedColor: const Color(0xFF6366F1).withAlpha(30),
+            checkmarkColor: const Color(0xFF6366F1),
+            showCheckmark: false,
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            side: BorderSide(color: hasPaidByFilter ? const Color(0xFF6366F1) : Colors.grey.shade300),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+          ),
+          if (hasPaidByFilter) ...[
+            const SizedBox(width: 4),
+            GestureDetector(
+              onTap: () => onPaidByChanged({}),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.red.withAlpha(20),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Icon(Icons.close_rounded, size: 14, color: Colors.red),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showPaidByFilterDialog(List<String> activeMembers, Set<String> current, void Function(Set<String>) onChanged) {
+    final selected = Set<String>.from(current);
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: const Color(0xFF6366F1).withAlpha(25), borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.person_search_rounded, color: Color(0xFF6366F1), size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text('Filter by Member', style: TextStyle(fontSize: 16)),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: activeMembers.map((m) {
+                final upper = m.toUpperCase();
+                return CheckboxListTile(
+                  dense: true,
+                  title: Text(m, style: const TextStyle(fontSize: 14)),
+                  value: selected.contains(upper),
+                  activeColor: const Color(0xFF6366F1),
+                  onChanged: (v) {
+                    setDialogState(() {
+                      if (v == true) { selected.add(upper); } else { selected.remove(upper); }
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () { onChanged({}); Navigator.pop(ctx); },
+              child: const Text('Clear'),
+            ),
+            FilledButton(
+              onPressed: () { onChanged(selected); Navigator.pop(ctx); },
+              child: const Text('Apply'),
             ),
           ],
         ),
@@ -681,6 +904,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: const Color(0xFFF59E0B).withAlpha(25), borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.edit_rounded, color: Color(0xFFF59E0B), size: 20),
+                ),
+                title: Text('Edit "${tx.transaction}"'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _navigateToAddExpense(editTransaction: tx);
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(color: Colors.red.withAlpha(25), borderRadius: BorderRadius.circular(10)),
                   child: const Icon(Icons.delete_rounded, color: Colors.red, size: 20),
                 ),
@@ -703,6 +938,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ),
       ),
     );
+  }
+
+  Future<void> _deleteExpense(MonthlyExpenseItem exp) async {
+    final confirm = await _confirmDelete('expense "${exp.expense}"');
+    if (confirm && exp.id != null) {
+      try {
+        await _api.deleteExpense(_selectedMonth, exp.id!);
+        _loadMonth();
+      } catch (e) {
+        _showSnack('Failed to delete: $e');
+      }
+    }
+  }
+
+  Future<void> _deleteTransaction(MonthlyTransaction tx) async {
+    final confirm = await _confirmDelete('transaction "${tx.transaction}"');
+    if (confirm && tx.id != null) {
+      try {
+        await _api.deleteTransactions([tx.id!]);
+        _loadMonth();
+      } catch (e) {
+        _showSnack('Failed to delete: $e');
+      }
+    }
   }
 
   Future<bool> _confirmDelete(String item) async {
@@ -733,7 +992,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ) ?? false;
   }
 
-  void _navigateToAddExpense({MonthlyExpenseItem? editExpense}) async {
+  void _navigateToAddExpense({MonthlyExpenseItem? editExpense, MonthlyTransaction? editTransaction}) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -741,6 +1000,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           month: _selectedMonth,
           activeMembers: _data?.activeMembers ?? [],
           editExpense: editExpense,
+          editTransaction: editTransaction,
         ),
       ),
     );
@@ -846,6 +1106,8 @@ class _ExpenseTile extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback? onLongPress;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _ExpenseTile({
     required this.title,
@@ -854,6 +1116,8 @@ class _ExpenseTile extends StatelessWidget {
     required this.icon,
     required this.color,
     this.onLongPress,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -894,6 +1158,29 @@ class _ExpenseTile extends StatelessWidget {
                 '₹${amount == amount.roundToDouble() ? amount.toStringAsFixed(0) : amount.toStringAsFixed(2)}',
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Colors.grey[800]),
               ),
+              if (onEdit != null || onDelete != null) ...[
+                const SizedBox(width: 4),
+                if (onEdit != null)
+                  SizedBox(
+                    width: 32, height: 32,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      iconSize: 18,
+                      icon: Icon(Icons.edit_rounded, color: color.withAlpha(180)),
+                      onPressed: onEdit,
+                    ),
+                  ),
+                if (onDelete != null)
+                  SizedBox(
+                    width: 32, height: 32,
+                    child: IconButton(
+                      padding: EdgeInsets.zero,
+                      iconSize: 18,
+                      icon: Icon(Icons.delete_rounded, color: Colors.red.withAlpha(160)),
+                      onPressed: onDelete,
+                    ),
+                  ),
+              ],
             ],
           ),
         ),

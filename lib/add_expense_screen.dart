@@ -6,12 +6,14 @@ class AddExpenseScreen extends StatefulWidget {
   final String month;
   final List<String> activeMembers;
   final MonthlyExpenseItem? editExpense;
+  final MonthlyTransaction? editTransaction;
 
   const AddExpenseScreen({
     super.key,
     required this.month,
     required this.activeMembers,
     this.editExpense,
+    this.editTransaction,
   });
 
   @override
@@ -31,7 +33,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   final Map<String, TextEditingController> _memberControllers = {};
   bool _saving = false;
 
-  bool get _isEditing => widget.editExpense != null;
+  bool get _isEditing => widget.editExpense != null || widget.editTransaction != null;
 
   @override
   void initState() {
@@ -41,14 +43,23 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     }
 
     if (_isEditing) {
-      final exp = widget.editExpense!;
-      _dateController.text = exp.date;
-      _descriptionController.text = exp.expense;
-      _costController.text = exp.cost.toString();
-      _splitController.text = exp.split.toString();
-      _paidBy = exp.paidBy;
-      for (var m in widget.activeMembers) {
-        _memberControllers[m]?.text = (exp.memberAmounts[m] ?? 0).toStringAsFixed(2);
+      if (widget.editExpense != null) {
+        final exp = widget.editExpense!;
+        _dateController.text = exp.date;
+        _descriptionController.text = exp.expense;
+        _costController.text = exp.cost.toString();
+        _splitController.text = exp.split.toString();
+        _paidBy = exp.paidBy;
+        for (var m in widget.activeMembers) {
+          _memberControllers[m]?.text = (exp.memberAmounts[m] ?? 0).toStringAsFixed(2);
+        }
+      } else if (widget.editTransaction != null) {
+        final tx = widget.editTransaction!;
+        _expenseType = 'variable';
+        _dateController.text = tx.date;
+        _descriptionController.text = tx.transaction;
+        _costController.text = tx.cost.toString();
+        _paidBy = tx.paidBy;
       }
     } else {
       _dateController.text = _todayString();
@@ -115,7 +126,11 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
           'cost': double.tryParse(_costController.text) ?? 0,
           'paidBy': _paidBy,
         };
-        await _api.addTransaction(widget.month, body);
+        if (widget.editTransaction != null) {
+          await _api.updateTransaction(widget.month, widget.editTransaction!.id!, body);
+        } else {
+          await _api.addTransaction(widget.month, body);
+        }
       } else {
         final memberAmounts = <String, double>{};
         for (var m in widget.activeMembers) {
